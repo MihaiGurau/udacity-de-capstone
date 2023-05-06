@@ -3,9 +3,13 @@ This is a boilerplate pipeline 'data_engineering'
 generated using Kedro 0.18.8
 """
 
+import logging
+
 import polars as pl
 import requests
 from udacity_de_capstone.utils import format_column_names
+
+log = logging.getLogger(__name__)
 
 
 def extract_population_node(response: requests.Response) -> pl.DataFrame:
@@ -29,3 +33,18 @@ def transform_population_node(population: pl.DataFrame) -> pl.DataFrame:
     )
     df.columns = format_column_names(df.columns)
     return df
+
+
+def dq_population_node(population: pl.DataFrame) -> pl.DataFrame:
+    """Runs data quality checks on population data"""
+    # check for negative population values
+    if not population.filter(pl.col("population") < 0).is_empty():
+        err = "Negative population values found"
+        log.error(err)
+        raise ValueError(err)
+    else:
+        log.info(
+            "[green]All DQ checks on population data passed![/]", extra={"markup": True}
+        )
+
+    return population

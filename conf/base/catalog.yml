@@ -14,7 +14,7 @@ _common_csv_settings_pandas: &csv_defaults_pandas
     decimal: .
 
 # raw dataset definitions
-census_population:
+raw_census_population:
   type: api.APIDataSet
   url: http://api.census.gov/data/2021/pep/population
   params:
@@ -57,10 +57,14 @@ cancellation_codes:
     separator: ","
 
 # transformed dataset definitons
-census_population_df:
+census_population:
   type: polars.CSVDataSet
-  filepath: data/02_intermediate/us_census_population.csv
+  filepath: data/02_intermediate/us_census_population_df.csv
 
-census_population_transformed:
+census_population_clean:
   type: polars.CSVDataSet
-  filepath: data/03_primary/us_census_population_transformed.csv
+  filepath: data/03_primary/us_census_population.csv
+
+census_population_validated:
+  type: polars.CSVDataSet
+  filepath: data/03_primary/us_census_population.csv
