@@ -1,0 +1,57 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+
+# common settings
+_common_csv_settings_pandas: &csv_defaults_pandas
+  load_args:
+    sep: ","
+    na_values: ["#NA", NA]
+  save_args:
+    index: False
+    date_format: "%Y-%m-%d %H:%M"
+    decimal: .
+
+# dataset definitions
+census_population:
+  type: api.APIDataSet
+  url: http://api.census.gov/data/2021/pep/population
+  params:
+    get: "NAME,LASTUPDATE,STATE,POP_2021"
+    for: "state:*"
+
+# airports_pandas:
+#   type: pandas.CSVDataSet
+#   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Stations.csv
+#   <<: *csv_defaults
+
+airports:
+  type: polars.CSVDataSet
+  filepath: data/01_raw/us-airlines-domestic-departure-dataset/Stations.csv
+  load_args:
+    separator: ","
+
+carriers:
+  type: polars.CSVDataSet
+  filepath: data/01_raw/us-airlines-domestic-departure-dataset/Carriers.csv
+  load_args:
+    separator: ","
+
+flights:
+  type: polars.CSVDataSet
+  filepath: data/01_raw/us-airlines-domestic-departure-dataset/CompleteData.csv
+  load_args:
+    separator: ","
+
+weather_codes:
+  type: polars.CSVDataSet
+  filepath: data/01_raw/us-airlines-domestic-departure-dataset/ActiveWeather.csv
+  load_args:
+    separator: ","
+
+cancellation_codes:
+  type: polars.CSVDataSet
+  filepath: data/01_raw/us-airlines-domestic-departure-dataset/Cancellation.csv
+  load_args:
+    separator: ","
