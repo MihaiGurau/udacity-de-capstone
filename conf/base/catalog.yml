@@ -13,7 +13,7 @@ _common_csv_settings_pandas: &csv_defaults_pandas
     date_format: "%Y-%m-%d %H:%M"
     decimal: .
 
-# dataset definitions
+# raw dataset definitions
 census_population:
   type: api.APIDataSet
   url: http://api.census.gov/data/2021/pep/population
@@ -55,3 +55,12 @@ cancellation_codes:
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Cancellation.csv
   load_args:
     separator: ","
+
+# transformed dataset definitons
+census_population_df:
+  type: polars.CSVDataSet
+  filepath: data/02_intermediate/us_census_population.csv
+
+census_population_transformed:
+  type: polars.CSVDataSet
+  filepath: data/03_primary/us_census_population_transformed.csv
