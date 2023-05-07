@@ -4,7 +4,7 @@
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
 
 # raw dataset definitions
-raw_census_population:
+raw_population:
   layer: raw
   type: api.APIDataSet
   url: http://api.census.gov/data/2021/pep/population
@@ -48,7 +48,7 @@ raw_cancellation_codes:
     separator: ","
 
 # transformed dataset definitons
-census_population_transformed:
+population_transformed:
   layer: intermediate
   type: polars.CSVDataSet
   filepath: data/02_intermediate/us_census_population.csv
@@ -68,7 +68,7 @@ flights_transformed:
   filename_suffix: ".pkl"
 
 # validated datasets
-census_population_validated:
+population_validated:
   layer: primary
   type: polars.CSVDataSet
   filepath: data/03_primary/us_census_population.csv
@@ -81,3 +81,10 @@ airports_validated:
   filepath: data/03_primary/airports.csv
   load_args:
     separator: ","
+
+flights_validated:
+  layer: primary
+  type: PartitionedDataSet
+  path: data/03_primary/flights
+  dataset: pickle.PickleDataSet
+  filename_suffix: ".pkl"

@@ -4,7 +4,7 @@ generated using Kedro 0.18.8
 """
 
 import logging
-from typing import Dict
+from typing import Callable, Dict
 
 import polars as pl
 import requests
@@ -15,6 +15,33 @@ from udacity_de_capstone.utils import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _run_generic_dq(df: pl.DataFrame) -> None:
+    """Common data quality checks for the project's datasets"""
+    # check that we have at least one value
+    if df.is_empty():
+        err = "Empty DataFrame!"
+        log.error(rich_error_wrapper(err), extra={"markup": True})
+        raise ValueError(err)
+
+    # check for valid latitudes
+    if not df["latitude"].is_between(-90, 90).all():
+        err = "Latitutes outside [-90, 90] degrees range found!"
+        log.error(rich_error_wrapper(err), extra={"markup": True})
+        raise ValueError(err)
+
+    # check for valid longitudes
+    if not df["longitude"].is_between(-180, 180).all():
+        err = "Longitudes outside [-180, 180] degrees range found!"
+        log.error(rich_error_wrapper(err), extra={"markup": True})
+        raise ValueError(err)
+
+    # check that we don't have any duplicates
+    if df.is_duplicated().any():
+        err = "Duplicate airport entries found!"
+        log.error(rich_error_wrapper(err), extra={"markup": True})
+        raise ValueError(err)
 
 
 def transform_population(response: requests.Response) -> pl.DataFrame:
@@ -67,35 +94,14 @@ def transform_airports(airports: pl.DataFrame) -> pl.DataFrame:
 
 def dq_airports(airports: pl.DataFrame) -> pl.DataFrame:
     """Data quality checks for airports"""
-    # check that we have at least one value
-    if airports.is_empty():
-        err = "Empty DataFrame!"
-        log.error(rich_error_wrapper(err), extra={"markup": True})
-        raise ValueError(err)
+    # first run all generic checks
+    _run_generic_dq(airports)
 
     # check for any null values
     null_counts = airports.null_count()
     if sum(null_counts.row(0)) != 0:
         print(null_counts.transpose(include_header=True, column_names=["null_count"]))
         err = "Detected null values!"
-        log.error(rich_error_wrapper(err), extra={"markup": True})
-        raise ValueError(err)
-
-    # check for valid latitudes
-    if not airports["latitude"].is_between(-90, 90).all():
-        err = "Latitutes outside [-90, 90] degrees range found!"
-        log.error(rich_error_wrapper(err), extra={"markup": True})
-        raise ValueError(err)
-
-    # check for valid longitudes
-    if not airports["longitude"].is_between(-180, 180).all():
-        err = "Longitudes outside [-180, 180] degrees range found!"
-        log.error(rich_error_wrapper(err), extra={"markup": True})
-        raise ValueError(err)
-
-    # check that we don't have any duplicates
-    if airports.is_duplicated().any():
-        err = "Duplicate airport entries found!"
         log.error(rich_error_wrapper(err), extra={"markup": True})
         raise ValueError(err)
 
@@ -113,6 +119,7 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
     size_unit = "gb"
     size_raw = flights.estimated_size(unit=size_unit)
     log.info(f"Raw flights dataset size: {size_raw:.2f} GB")
+    log.info(f"Records: {flights.shape[0]:,}")
 
     df = (
         flights.lazy()
@@ -164,3 +171,41 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
         partitions[new_key] = partitions.pop(old_key)
 
     return partitions
+
+
+def dq_flights(
+    flights: Dict[str, Callable[[], pl.DataFrame]]
+) -> Dict[str, pl.DataFrame]:
+    """Perform quality checks on flight data"""
+
+    for year_month, data_func in flights.items():
+        # first load the data for the currently processed partition
+        data = data_func()
+
+        # run all generic checks
+        _run_generic_dq(data)
+
+        # check for null values in specific columns
+        cols_for_null_checks = [
+            "fl_date",
+            "origin",
+            "destination",
+            "op_unique_carrier",
+            "mkt_unique_carrier",
+        ]
+        null_counts = data.select(cols_for_null_checks).null_count()
+        if sum(null_counts.row(0)) != 0:
+            err = (
+                f"Null values for relevant columns detected in {year_month} partition!"
+                " (printing at most 5 of them)"
+            )
+            log.error(rich_error_wrapper(err), extra={"markup": True})
+            raise ValueError(err)
+
+    # return unchanged data if all checks passed
+    log.info(
+        rich_success_wrapper("All DQ checks on flights data passed!"),
+        extra={"markup": True},
+    )
+
+    return flights
