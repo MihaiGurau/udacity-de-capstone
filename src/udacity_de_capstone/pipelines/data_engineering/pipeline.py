@@ -8,7 +8,6 @@ from kedro.pipeline import Pipeline, node, pipeline
 from .nodes import (
     dq_airports,
     dq_population,
-    extract_population,
     transform_airports,
     transform_flights,
     transform_population,
@@ -19,29 +18,22 @@ def create_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
             node(
-                func=extract_population,
-                inputs="raw_census_population",
-                outputs="census_population",
-                name="extract_population",
-                tags="population",
-            ),
-            node(
                 func=transform_population,
-                inputs="census_population",
-                outputs="census_population_clean",
+                inputs="raw_census_population",
+                outputs="census_population_transformed",
                 name="transform_population",
                 tags="population",
             ),
             node(
                 func=dq_population,
-                inputs="census_population_clean",
+                inputs="census_population_transformed",
                 outputs="census_population_validated",
                 name="validate_population",
                 tags="population",
             ),
             node(
                 func=transform_airports,
-                inputs="airports",
+                inputs="raw_airports",
                 outputs="airports_transformed",
                 name="transform_airports",
                 tags="flights",
@@ -55,7 +47,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=transform_flights,
-                inputs="flights",
+                inputs="raw_flights",
                 outputs="flights_transformed",
                 name="transform_flights",
                 tags="flights",

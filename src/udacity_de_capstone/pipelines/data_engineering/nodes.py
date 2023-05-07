@@ -17,27 +17,25 @@ from udacity_de_capstone.utils import (
 log = logging.getLogger(__name__)
 
 
-def extract_population(response: requests.Response) -> pl.DataFrame:
-    """Loads population data from the US Census API"""
+def transform_population(response: requests.Response) -> pl.DataFrame:
+    """
+    Loads population data and
+    performs type casts, column cleaning, renaming, and sorting
+    """
+
     data = response.json()
-    return pl.from_records(data[1:], schema=data[0])
-
-
-def transform_population(population: pl.DataFrame) -> pl.DataFrame:
-    """
-    Performs type casts, column cleaning, renaming, and sorting on population data
-    """
-    df = (
+    population = pl.from_records(data[1:], schema=data[0])
+    population = (
         population.rename({"POP_2021": "POPULATION", "LASTUPDATE": "LAST_UPDATE_DATE"})
         .with_columns(
             pl.col("LAST_UPDATE_DATE").str.to_date(r"%B. %d, %Y"),
             pl.col("POPULATION").cast(pl.Int64),
         )
         .drop("state")
-        .sort(by="NAME")
+        .sort("NAME")
     )
-    df.columns = format_column_names(df.columns)
-    return df
+    population.columns = format_column_names(population.columns)
+    return population
 
 
 def dq_population(population: pl.DataFrame) -> pl.DataFrame:
@@ -111,6 +109,11 @@ def dq_airports(airports: pl.DataFrame) -> pl.DataFrame:
 
 def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
     """Initial transformation of flight data"""
+
+    size_unit = "gb"
+    size_raw = flights.estimated_size(unit=size_unit)
+    log.info(f"Raw flights dataset size: {size_raw:.2f} GB")
+
     df = (
         flights.lazy()
         .with_columns(
@@ -134,6 +137,14 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
         .drop("DEST", "ICAO TYPE")
         .collect()
     )
+
+    # log size changes post dtype application
+    size_parsed = df.estimated_size(unit=size_unit)
+    size_diff_pct = (size_parsed - size_raw) / size_raw
+    log.info(f"Parsed flights dataset size: {size_parsed:.2f} GB")
+    log.info(f"Percentage size difference post dtype application: {size_diff_pct:.2%}")
+
+    # perform column name formatting
     df.columns = format_column_names(df.columns)
 
     # partition by flight year and month
@@ -147,8 +158,9 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
         _ = p.drop_in_place(p_key)
 
     # rename partition keys
-    new_keys = [f"flights_{x}" for x in partitions.keys()]
-    for key, new_key in zip(list(partitions.keys()), new_keys):
-        partitions[new_key] = partitions.pop(key)
+    old_keys = list(partitions.keys())
+    new_keys = (f"flights_{x}" for x in old_keys)
+    for old_key, new_key in zip(old_keys, new_keys):
+        partitions[new_key] = partitions.pop(old_key)
 
     return partitions

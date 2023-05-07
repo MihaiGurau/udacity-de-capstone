@@ -3,16 +3,6 @@
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
 
-# common settings
-_common_csv_settings_pandas: &csv_defaults_pandas
-  load_args:
-    sep: ","
-    na_values: ["#NA", NA]
-  save_args:
-    index: False
-    date_format: "%Y-%m-%d %H:%M"
-    decimal: .
-
 # raw dataset definitions
 raw_census_population:
   layer: raw
@@ -22,52 +12,43 @@ raw_census_population:
     get: "NAME,LASTUPDATE,STATE,POP_2021"
     for: "state:*"
 
-# airports_pandas:
-#   type: pandas.CSVDataSet
-#   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Stations.csv
-#   <<: *csv_defaults
-
-airports:
+raw_airports:
   layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Stations.csv
   load_args:
     separator: ","
 
-carriers:
+raw_carriers:
   layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Carriers.csv
   load_args:
     separator: ","
 
-flights:
+raw_flights:
   layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/CompleteData.csv
   load_args:
     separator: ","
 
-weather_codes:
+raw_weather_codes:
   layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/ActiveWeather.csv
   load_args:
     separator: ","
 
-cancellation_codes:
+raw_cancellation_codes:
+  layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Cancellation.csv
   load_args:
     separator: ","
 
 # transformed dataset definitons
-census_population:
-  layer: intermediate
-  type: polars.CSVDataSet
-  filepath: data/02_intermediate/us_census_population_df.csv
-
-census_population_clean:
+census_population_transformed:
   layer: intermediate
   type: polars.CSVDataSet
   filepath: data/02_intermediate/us_census_population.csv
@@ -76,21 +57,27 @@ airports_transformed:
   layer: intermediate
   type: polars.CSVDataSet
   filepath: data/02_intermediate/airports.csv
+  load_args:
+    separator: ","
 
 flights_transformed:
   layer: intermediate
   type: PartitionedDataSet
   path: data/02_intermediate/flights
-  dataset: polars.CSVDataSet
-  filename_suffix: ".csv"
+  dataset: pickle.PickleDataSet
+  filename_suffix: ".pkl"
 
 # validated datasets
 census_population_validated:
   layer: primary
   type: polars.CSVDataSet
-  filepath: data/03_primary/airports.csv
+  filepath: data/03_primary/us_census_population.csv
+  load_args:
+    separator: ","
 
 airports_validated:
   layer: primary
   type: polars.CSVDataSet
   filepath: data/03_primary/airports.csv
+  load_args:
+    separator: ","
