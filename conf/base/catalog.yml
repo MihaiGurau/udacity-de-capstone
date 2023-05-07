@@ -15,6 +15,7 @@ _common_csv_settings_pandas: &csv_defaults_pandas
 
 # raw dataset definitions
 raw_census_population:
+  layer: raw
   type: api.APIDataSet
   url: http://api.census.gov/data/2021/pep/population
   params:
@@ -27,24 +28,28 @@ raw_census_population:
 #   <<: *csv_defaults
 
 airports:
+  layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Stations.csv
   load_args:
     separator: ","
 
 carriers:
+  layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/Carriers.csv
   load_args:
     separator: ","
 
 flights:
+  layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/CompleteData.csv
   load_args:
     separator: ","
 
 weather_codes:
+  layer: raw
   type: polars.CSVDataSet
   filepath: data/01_raw/us-airlines-domestic-departure-dataset/ActiveWeather.csv
   load_args:
@@ -58,13 +63,34 @@ cancellation_codes:
 
 # transformed dataset definitons
 census_population:
+  layer: intermediate
   type: polars.CSVDataSet
   filepath: data/02_intermediate/us_census_population_df.csv
 
 census_population_clean:
+  layer: intermediate
   type: polars.CSVDataSet
-  filepath: data/03_primary/us_census_population.csv
+  filepath: data/02_intermediate/us_census_population.csv
 
-census_population_validated:
+airports_transformed:
+  layer: intermediate
   type: polars.CSVDataSet
-  filepath: data/03_primary/us_census_population.csv
+  filepath: data/02_intermediate/airports.csv
+
+flights_transformed:
+  layer: intermediate
+  type: PartitionedDataSet
+  path: data/02_intermediate/flights
+  dataset: polars.CSVDataSet
+  filename_suffix: ".csv"
+
+# validated datasets
+census_population_validated:
+  layer: primary
+  type: polars.CSVDataSet
+  filepath: data/03_primary/airports.csv
+
+airports_validated:
+  layer: primary
+  type: polars.CSVDataSet
+  filepath: data/03_primary/airports.csv
