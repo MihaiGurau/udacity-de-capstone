@@ -62,10 +62,13 @@ airports_transformed:
 
 flights_transformed:
   layer: intermediate
-  type: PartitionedDataSet
+  type: IncrementalDataSet
   path: data/02_intermediate/flights
-  dataset: pickle.PickleDataSet
-  filename_suffix: ".pkl"
+  dataset: pandas.ParquetDataSet
+  filename_suffix: ".parquet"
+  load_args:
+    use_nullable_dtypes: true
+    engine: pyarrow
 
 # validated datasets
 census_population_validated:
@@ -81,3 +84,15 @@ airports_validated:
   filepath: data/03_primary/airports.csv
   load_args:
     separator: ","
+
+flights_validated:
+  layer: primary
+  type: IncrementalDataSet
+  path: data/03_primary/flights
+  dataset: pandas.ParquetDataSet
+  filename_suffix: ".parquet"
+  load_args:
+    use_nullable_dtypes: true
+    engine: pyarrow
+  # checkpoint:
+  #   filepath: data/03_primary/flights/checkpoint

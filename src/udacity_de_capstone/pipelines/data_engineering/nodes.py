@@ -4,8 +4,9 @@ generated using Kedro 0.18.8
 """
 
 import logging
-from typing import Dict
+from typing import Callable, Dict
 
+import pandas as pd
 import polars as pl
 import requests
 from udacity_de_capstone.utils import (
@@ -107,7 +108,7 @@ def dq_airports(airports: pl.DataFrame) -> pl.DataFrame:
     return airports
 
 
-def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
+def transform_flights(flights: pl.DataFrame) -> Dict[str, pd.DataFrame]:
     """Initial transformation of flight data"""
 
     size_unit = "gb"
@@ -161,6 +162,26 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
     old_keys = list(partitions.keys())
     new_keys = (f"flights_{x}" for x in old_keys)
     for old_key, new_key in zip(old_keys, new_keys):
-        partitions[new_key] = partitions.pop(old_key)
+        partitions[new_key] = partitions.pop(old_key).to_pandas()
 
     return partitions
+
+
+# def dq_flights(
+#     flights: Dict[str, Callable[[], pd.DataFrame]]
+# ) -> Dict[str, pd.DataFrame]:
+#     """Quality checks for flights"""
+#     for _, partition_func in flights.items():
+#         data = pl.from_pandas(partition_func())
+#         print(data.head())
+
+#     return {"test": pd.DataFrame()}
+
+
+def dq_flights(flights: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """Quality checks for flights"""
+    for _, df in flights.items():
+        data = pl.from_pandas(df)
+        print(data.head())
+
+    return {"test": pd.DataFrame()}

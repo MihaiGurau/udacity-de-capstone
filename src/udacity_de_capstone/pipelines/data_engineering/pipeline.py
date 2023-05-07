@@ -7,6 +7,7 @@ from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import (
     dq_airports,
+    dq_flights,
     dq_population,
     transform_airports,
     transform_flights,
@@ -50,6 +51,13 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs="raw_flights",
                 outputs="flights_transformed",
                 name="transform_flights",
+                tags="flights",
+            ),
+            node(
+                func=dq_flights,
+                inputs="flights_transformed",
+                outputs="flights_validated",
+                name="validate_flights",
                 tags="flights",
             ),
         ]
