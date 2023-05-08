@@ -83,13 +83,85 @@ def dq_population(population: pl.DataFrame) -> pl.DataFrame:
 
 def transform_airports(airports: pl.DataFrame) -> pl.DataFrame:
     """Basic transformations for airports"""
-    df = airports.drop(
+    df = airports.with_columns(pl.col("AIRPORT").cast(pl.Categorical)).drop(
         "DISPLAY_AIRPORT_CITY_NAME_FULL",
-        "AIRPORT_STATE_NAME",
         "FAA",
     )
     df.columns = format_column_names(df.columns)
     return df
+
+
+def combine_flight_state_population(
+    flights: Dict[str, Callable[[], pl.DataFrame]],
+    airports: pl.DataFrame,
+    population: pl.DataFrame,
+) -> pl.DataFrame:
+    """Enrich the flight data with population figures on state level.
+    This is simply done to allow for easier analysis later of combined datasets.
+    """
+    output: Dict[str, pl.DataFrame] = {}
+    for partition_id, load_flights in flights.items():
+        # load partitioned data
+        flight_data = load_flights()
+
+        # set misc variables needed for column selection during join
+        duplicated_cols_pattern = "^*_right$"
+        new_columns_post_joins = [
+            "origin_state_name",
+            "destination_state_name",
+            "origin_population",
+            "destination_population",
+        ]
+        columns_after_join = flight_data.columns + new_columns_post_joins
+
+        # create lazy versions of polars dataframes
+        ldf_airports = airports.lazy()
+        ldf_population = population.lazy()
+
+        # rename partition for output (kinda ugly...)
+        new_partition_id = f"combined{partition_id[partition_id.rfind('_', 0, partition_id.rfind('_')):]}"
+
+        # apply joins and keep only needed columns
+        output[new_partition_id] = (
+            flight_data.limit(10)
+            .lazy()
+            .join(
+                ldf_airports,
+                left_on="origin",
+                right_on="airport",
+                how="inner",
+            )
+            .rename({"airport_state_name": "origin_state_name"})
+            .select(pl.exclude(duplicated_cols_pattern))
+            .join(
+                ldf_airports,
+                left_on="destination",
+                right_on="airport",
+                how="inner",
+            )
+            .select(pl.exclude(duplicated_cols_pattern))
+            .rename({"airport_state_name": "destination_state_name"})
+            .join(
+                ldf_population,
+                left_on="origin_state_name",
+                right_on="name",
+                how="inner",
+            )
+            .select(pl.exclude(duplicated_cols_pattern))
+            .rename({"population": "origin_population"})
+            .join(
+                ldf_population,
+                left_on="destination_state_name",
+                right_on="name",
+                how="inner",
+            )
+            .select(pl.exclude(duplicated_cols_pattern))
+            .rename({"population": "destination_population"})
+            .select(columns_after_join)
+            .collect()
+        )
+
+    return output
 
 
 def dq_airports(airports: pl.DataFrame) -> pl.DataFrame:
@@ -129,8 +201,6 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
             pl.col("MKT_CARRIER_FL_NUM").cast(str).str.zfill(4),
             pl.col("OP_UNIQUE_CARRIER").cast(pl.Categorical),
             pl.col("OP_CARRIER_FL_NUM").cast(str).str.zfill(4),
-            pl.col("ORIGIN").cast(pl.Categorical),
-            pl.col("DEST").cast(pl.Categorical).alias("DESTINATION"),
             pl.col("DEP_TIME").str.to_datetime(),
             pl.col("CRS_DEP_TIME").str.to_datetime(),
             pl.col("MANUFACTURER").cast(pl.Categorical),
@@ -141,7 +211,8 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
             pl.col("MID_LEVEL_CLOUD").cast(pl.Boolean),
             pl.col("HIGH_LEVEL_CLOUD").cast(pl.Boolean),
         )
-        .drop("DEST", "ICAO TYPE")
+        .rename({"DEST": "DESTINATION"})
+        .drop("ICAO TYPE")
         .collect()
     )
 

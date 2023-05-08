@@ -6,6 +6,7 @@ generated using Kedro 0.18.8
 from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import (
+    combine_flight_state_population,
     dq_airports,
     dq_flights,
     dq_population,
@@ -59,6 +60,17 @@ def create_pipeline(**kwargs) -> Pipeline:
                 outputs="flights_validated",
                 name="validate_flights",
                 tags="flights",
+            ),
+            node(
+                func=combine_flight_state_population,
+                inputs=[
+                    "flights_validated",
+                    "airports_validated",
+                    "population_validated",
+                ],
+                outputs="combined",
+                name="combine_all_sources",
+                tags="cobmined",
             ),
         ]
     )

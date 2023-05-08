@@ -88,3 +88,11 @@ flights_validated:
   path: data/03_primary/flights
   dataset: pickle.PickleDataSet
   filename_suffix: ".pkl"
+
+# combined datasets
+combined:
+  layer: combined
+  type: PartitionedDataSet
+  path: data/04_feature/combined
+  dataset: polars.CSVDataSet
+  filename_suffix: ".csv"
