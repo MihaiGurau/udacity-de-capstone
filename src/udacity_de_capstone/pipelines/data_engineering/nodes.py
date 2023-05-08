@@ -104,16 +104,6 @@ def combine_flight_state_population(
         # load partitioned data
         flight_data = load_flights()
 
-        # set misc variables needed for column selection during join
-        duplicated_cols_pattern = "^*_right$"
-        new_columns_post_joins = [
-            "origin_state_name",
-            "destination_state_name",
-            "origin_population",
-            "destination_population",
-        ]
-        columns_after_join = flight_data.columns + new_columns_post_joins
-
         # create lazy versions of polars dataframes
         ldf_airports = airports.lazy()
         ldf_population = population.lazy()
@@ -126,38 +116,41 @@ def combine_flight_state_population(
             flight_data.limit(10)
             .lazy()
             .join(
-                ldf_airports,
+                ldf_airports.select(
+                    pl.col("airport"),
+                    pl.col("airport_state_name").alias("origin_state_name"),
+                    pl.col("airport_state_code").alias("origin_state_code"),
+                ),
                 left_on="origin",
                 right_on="airport",
                 how="inner",
             )
-            .rename({"airport_state_name": "origin_state_name"})
-            .select(pl.exclude(duplicated_cols_pattern))
             .join(
-                ldf_airports,
+                ldf_airports.select(
+                    pl.col("airport"),
+                    pl.col("airport_state_name").alias("destination_state_name"),
+                    pl.col("airport_state_code").alias("destination_state_code"),
+                ),
                 left_on="destination",
                 right_on="airport",
                 how="inner",
             )
-            .select(pl.exclude(duplicated_cols_pattern))
-            .rename({"airport_state_name": "destination_state_name"})
             .join(
-                ldf_population,
-                left_on="origin_state_name",
-                right_on="name",
+                ldf_population.select(
+                    pl.col("name").alias("origin_state_name"),
+                    pl.col("population").alias("origin_state_population"),
+                ),
+                on="origin_state_name",
                 how="inner",
             )
-            .select(pl.exclude(duplicated_cols_pattern))
-            .rename({"population": "origin_population"})
             .join(
-                ldf_population,
-                left_on="destination_state_name",
-                right_on="name",
+                ldf_population.select(
+                    pl.col("name").alias("destination_state_name"),
+                    pl.col("population").alias("destination_state_population"),
+                ),
+                on="destination_state_name",
                 how="inner",
             )
-            .select(pl.exclude(duplicated_cols_pattern))
-            .rename({"population": "destination_population"})
-            .select(columns_after_join)
             .collect()
         )
 
