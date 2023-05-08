@@ -53,7 +53,7 @@ The figure below displays the Data Engineering pipeline as a DAG. This was creat
 ![DAG](images/dag.svg?raw=true&sanitize=true "DAG")
 
 ## Data Dictionary
-The output data dictionary is stored as a collection of JSON files exported from the schema of `polars.DataFrame` objects. These can be found in the [data_dictionary](data_dictionary/) folder of the repo. As a summary, there are two layers of pipeline outputs:
+The output data dictionary is stored as a collection of JSON files exported from the schema of `polars.DataFrame` objects. These can be found in the [data_dictionary](docs/data_dictionary/) folder of the repo. As a summary, there are two layers of pipeline outputs:
 
 1. Complete Data - this is a partitioned dataset which includes all the joined data coming from all sources. Its intended use is for data practitioners who would be comfortable running analytics using Polars or Spark.
 
