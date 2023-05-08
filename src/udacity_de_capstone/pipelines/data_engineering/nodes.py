@@ -127,7 +127,7 @@ def combine_all_data(
                 ),
                 left_on="origin",
                 right_on="airport",
-                how="inner",
+                how="left",
             )
             .join(
                 ldf_airports.select(
@@ -137,7 +137,7 @@ def combine_all_data(
                 ),
                 left_on="destination",
                 right_on="airport",
-                how="inner",
+                how="left",
             )
             .join(
                 ldf_population.select(
@@ -145,7 +145,7 @@ def combine_all_data(
                     pl.col("population").alias("origin_state_population"),
                 ),
                 on="origin_state_name",
-                how="inner",
+                how="left",
             )
             .join(
                 ldf_population.select(
@@ -153,7 +153,7 @@ def combine_all_data(
                     pl.col("population").alias("destination_state_population"),
                 ),
                 on="destination_state_name",
-                how="inner",
+                how="left",
             )
             .join(
                 cancellation_codes.lazy().rename(
@@ -161,6 +161,7 @@ def combine_all_data(
                 ),
                 left_on="cancelled",
                 right_on="STATUS",
+                how="left",
             )
             .join(
                 weather_codes.lazy().rename(
@@ -168,23 +169,31 @@ def combine_all_data(
                 ),
                 left_on="active_weather",
                 right_on="STATUS",
+                how="left",
             )
             .join(
                 carriers.lazy().rename(
                     {"CODE": "mkt_unique_carrier", "DESCRIPTION": "mkt_carrier_name"}
                 ),
                 on="mkt_unique_carrier",
-                how="inner",
+                how="left",
             )
             .join(
                 carriers.lazy().rename(
                     {"CODE": "op_unique_carrier", "DESCRIPTION": "op_carrier_name"}
                 ),
                 on="op_unique_carrier",
-                how="inner",
+                how="left",
             )
             .collect()
         )
+
+        # check row count post join
+        initial_row_count = flight_data.select(pl.count()).item()
+        post_op_row_count = output[new_partition_id].select(pl.count()).item()
+        assert (
+            initial_row_count == post_op_row_count
+        ), f"Row count mismatch post join. Expected {initial_row_count:,}. Found {post_op_row_count:,}"
 
     return output
 

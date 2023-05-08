@@ -95,5 +95,5 @@ combined_all:
   type: PartitionedDataSet
   path: data/04_feature/combined
   dataset: pickle.PickleDataSet
-  filename_suffix: ".csv"
+  filename_suffix: ".pkl"
 # TODO MG: business level aggregates
