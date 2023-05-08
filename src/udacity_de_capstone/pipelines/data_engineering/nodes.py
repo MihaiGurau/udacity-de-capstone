@@ -91,16 +91,21 @@ def transform_airports(airports: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
-def combine_flight_state_population(
+def combine_all_data(
     flights: Dict[str, Callable[[], pl.DataFrame]],
     airports: pl.DataFrame,
     population: pl.DataFrame,
+    cancellation_codes: pl.DataFrame,
+    weather_codes: pl.DataFrame,
+    carriers: pl.DataFrame,
 ) -> pl.DataFrame:
-    """Enrich the flight data with population figures on state level.
+    """Enrich the flight data with population figures on state level + master data
     This is simply done to allow for easier analysis later of combined datasets.
     """
     output: Dict[str, pl.DataFrame] = {}
     for partition_id, load_flights in flights.items():
+        log.info(f"Processing {partition_id=}")
+
         # load partitioned data
         flight_data = load_flights()
 
@@ -113,8 +118,7 @@ def combine_flight_state_population(
 
         # apply joins and keep only needed columns
         output[new_partition_id] = (
-            flight_data.limit(10)
-            .lazy()
+            flight_data.lazy()
             .join(
                 ldf_airports.select(
                     pl.col("airport"),
@@ -149,6 +153,34 @@ def combine_flight_state_population(
                     pl.col("population").alias("destination_state_population"),
                 ),
                 on="destination_state_name",
+                how="inner",
+            )
+            .join(
+                cancellation_codes.lazy().rename(
+                    {"CANCELLATION_REASON": "cancellation_reason"}
+                ),
+                left_on="cancelled",
+                right_on="STATUS",
+            )
+            .join(
+                weather_codes.lazy().rename(
+                    {"WEATHER_DESCRIPTION": "weather_description"}
+                ),
+                left_on="active_weather",
+                right_on="STATUS",
+            )
+            .join(
+                carriers.lazy().rename(
+                    {"CODE": "mkt_unique_carrier", "DESCRIPTION": "mkt_carrier_name"}
+                ),
+                on="mkt_unique_carrier",
+                how="inner",
+            )
+            .join(
+                carriers.lazy().rename(
+                    {"CODE": "op_unique_carrier", "DESCRIPTION": "op_carrier_name"}
+                ),
+                on="op_unique_carrier",
                 how="inner",
             )
             .collect()
@@ -190,9 +222,7 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
         flights.lazy()
         .with_columns(
             pl.col("FL_DATE").str.to_date(),
-            pl.col("MKT_UNIQUE_CARRIER").cast(pl.Categorical),
             pl.col("MKT_CARRIER_FL_NUM").cast(str).str.zfill(4),
-            pl.col("OP_UNIQUE_CARRIER").cast(pl.Categorical),
             pl.col("OP_CARRIER_FL_NUM").cast(str).str.zfill(4),
             pl.col("DEP_TIME").str.to_datetime(),
             pl.col("CRS_DEP_TIME").str.to_datetime(),
@@ -203,6 +233,7 @@ def transform_flights(flights: pl.DataFrame) -> Dict[str, pl.DataFrame]:
             pl.col("LOW_LEVEL_CLOUD").cast(pl.Boolean),
             pl.col("MID_LEVEL_CLOUD").cast(pl.Boolean),
             pl.col("HIGH_LEVEL_CLOUD").cast(pl.Boolean),
+            pl.col("ACTIVE_WEATHER").cast(pl.Int64),
         )
         .rename({"DEST": "DESTINATION"})
         .drop("ICAO TYPE")
