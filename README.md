@@ -17,7 +17,7 @@ Set up your Python venv using `python -m venv venv`, install [Kedro](https://pyp
 
 The CSV datasets need to be downloaded from their source and placed in the `data/01_raw` directory. Note that the pipeline expects airlines data to be unzipped and stored in `data/01_raw/us-airlines-domestic-departure-dataset/`.
 
-For the API datasets, only the API key needs to be placed in a `conf/local/credentials.yml` file, which has to be created beforehand. A sample of how this file should look like is indicated below. To obtain your API key, please consult the [[Udacity Capstone Project#US Census Data ([source](https://www.faa.gov/airports/engineering/aircraft_char_database/data)]]
+For the API datasets, only the API key needs to be placed in a `conf/local/credentials.yml` file, which has to be created beforehand. A sample of how this file should look like is indicated below. To obtain your API key, see [here](https://www.census.gov/content/dam/Census/library/publications/2020/acs/acs_api_handbook_2020_ch02.pdf).
 
 ```yaml
 dev_census_api:
