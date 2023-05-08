@@ -1,0 +1,11 @@
+{
+    "month": "Date",
+    "origin_state_name": "Utf8",
+    "origin_state_code": "Utf8",
+    "count_departures": "UInt32",
+    "count_unique_airports": "UInt32",
+    "count_unique_operating_carriers": "UInt32",
+    "count_citizens": "Int64",
+    "airports_per_million_citizens": "Float64",
+    "departures_per_million_citizens": "Float64"
+}

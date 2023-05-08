@@ -6,6 +6,9 @@ generated using Kedro 0.18.8
 from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import (
+    agg_by_departure_airport,
+    agg_by_op_carrier,
+    agg_by_state,
     combine_all_data,
     dq_airports,
     dq_flights,
@@ -74,6 +77,27 @@ def create_pipeline(**kwargs) -> Pipeline:
                 outputs="combined_all",
                 name="combine_all_sources",
                 tags="combined",
+            ),
+            node(
+                func=agg_by_op_carrier,
+                inputs="combined_all",
+                outputs="operating_carrier_stats",
+                name="create_operating_carrier_aggregate",
+                tags="business",
+            ),
+            node(
+                func=agg_by_state,
+                inputs="combined_all",
+                outputs="state_stats",
+                name="create_state_level_aggregate",
+                tags="business",
+            ),
+            node(
+                func=agg_by_departure_airport,
+                inputs="combined_all",
+                outputs="departure_airport_stats",
+                name="create_departure_airport_level_aggregate",
+                tags="business",
             ),
         ]
     )

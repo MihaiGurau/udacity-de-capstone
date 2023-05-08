@@ -96,4 +96,20 @@ combined_all:
   path: data/04_feature/combined
   dataset: pickle.PickleDataSet
   filename_suffix: ".pkl"
-# TODO MG: business level aggregates
+
+# business level aggregates
+
+operating_carrier_stats:
+  layer: business_aggregates
+  type: polars.CSVDataSet
+  filepath: data/08_reporting/operating_carrier_stats.csv
+
+state_stats:
+  layer: business_aggregates
+  type: polars.CSVDataSet
+  filepath: data/08_reporting/state_stats.csv
+
+departure_airport_stats:
+  layer: business_aggregates
+  type: polars.CSVDataSet
+  filepath: data/08_reporting/departure_airport_stats.csv

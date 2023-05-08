@@ -4,7 +4,7 @@ generated using Kedro 0.18.8
 """
 
 import logging
-from typing import Callable, Dict
+from typing import Callable, Dict, List
 
 import polars as pl
 import requests
@@ -313,3 +313,120 @@ def dq_flights(
     )
 
     return flights
+
+
+def agg_by_op_carrier(data: Dict[str, Callable[[], pl.DataFrame]]) -> pl.DataFrame:
+    """Create business level aggregate
+    for delay, airtime, and distance
+    per date and operating carrier
+    """
+    # compute aggregates per partition
+    aggregates_per_partition: List[pl.DataFrame] = []
+    for data_func in data.values():
+        df = data_func()
+        aggregates_per_partition.append(
+            df.lazy()
+            .groupby("fl_date", "op_unique_carrier")
+            .agg(
+                # departure delay
+                total_departure_delay=pl.sum("dep_delay"),
+                avg_departure_delay=pl.avg("dep_delay"),
+                median_departure_delay=pl.median("dep_delay"),
+                # airtime
+                total_airtime=pl.sum("air_time"),
+                avg_airtime=pl.avg("air_time"),
+                median_airtime=pl.median("air_time"),
+                # distance
+                total_distance=pl.sum("distance"),
+                avg_distance=pl.avg("distance"),
+                median_distance=pl.median("distance"),
+            )
+            .collect()
+        )
+
+    # combine all partitions
+    result = pl.concat(aggregates_per_partition).sort(
+        by=["fl_date", "op_unique_carrier"]
+    )
+    log.info(f"Schema of operating carrier agg {result.schema}")
+    return result
+
+
+def agg_by_departure_airport(
+    data: Dict[str, Callable[[], pl.DataFrame]]
+) -> pl.DataFrame:
+    """Create business level aggregate
+    per airport with connection counts
+    and frequencies per operating carrier
+    """
+    # gather required data in a single dataframe
+    df = pl.concat(
+        [
+            load_df().select(
+                "fl_date",
+                "origin",
+                "destination",
+                "dep_delay",
+                "op_unique_carrier",
+                "active_weather",
+            )
+            for load_df in data.values()
+        ]
+    )
+
+    # count overall connections, departures, and arrivals
+    result = (
+        df.lazy()
+        .groupby("origin")
+        .agg(
+            count_connections=pl.n_unique("destination"),
+            count_departures=pl.count(),
+        )
+        .join(
+            df.lazy().groupby("destination").agg(count_arrivals=pl.count()),
+            left_on="origin",
+            right_on="destination",
+        )
+        .sort("count_connections", descending=True)
+        .collect()
+    )
+    log.info(f"Schema of departure airport aggregates: {result.schema}")
+    print(result.head())
+    return result
+
+
+def agg_by_state(data: Dict[str, Callable[[], pl.DataFrame]]) -> pl.DataFrame:
+    """Create business level aggregate
+    per state with flight counts and population
+    """
+    outputs: List[pl.DataFrame] = []
+    for data_func in data.values():
+        df = data_func()
+        outputs.append(
+            df.lazy()
+            .with_columns(pl.col("fl_date").dt.month_start().alias("month"))
+            .groupby("month", "origin_state_name", "origin_state_code")
+            .agg(
+                count_departures=pl.count(),
+                count_unique_airports=pl.n_unique("origin"),
+                count_unique_operating_carriers=pl.n_unique("op_unique_carrier"),
+                count_citizens=pl.first("origin_state_population"),
+            )
+            .with_columns(
+                (
+                    1_000_000
+                    * pl.col("count_unique_airports")
+                    / pl.col("count_citizens")
+                ).alias("airports_per_million_citizens"),
+                (
+                    1_000_000 * pl.col("count_departures") / pl.col("count_citizens")
+                ).alias("departures_per_million_citizens"),
+            )
+            .collect()
+        )
+    result = pl.concat(outputs).sort(
+        by=["month", "count_departures"], descending=[False, True]
+    )
+    log.info(f"Schema of state agg: {result.schema}")
+    print(result.head())
+    return result

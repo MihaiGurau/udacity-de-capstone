@@ -1,0 +1,13 @@
+{
+    "fl_date": "Date",
+    "op_unique_carrier": "Utf8",
+    "total_departure_delay": "Int64",
+    "avg_departure_delay": "Float64",
+    "median_departure_delay": "Float64",
+    "total_airtime": "Int64",
+    "avg_airtime": "Float64",
+    "median_airtime": "Float64",
+    "total_distance": "Int64",
+    "avg_distance": "Float64",
+    "median_distance": "Float64"
+}

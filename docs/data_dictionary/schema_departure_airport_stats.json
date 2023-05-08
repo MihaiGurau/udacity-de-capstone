@@ -1,0 +1,6 @@
+{
+    "origin": "Utf8",
+    "count_connections": "UInt32",
+    "count_departures": "UInt32",
+    "count_arrivals": "UInt32"
+}
