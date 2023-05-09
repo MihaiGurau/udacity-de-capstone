@@ -104,3 +104,7 @@ Using a Data Lake for storage should accommodate this scenario on the storage si
 | Description | Detailed airport data, with more fields than in the US airlines dataset |
 | Format      | CSV                                                                     |
  -->
+
+## Graduation Certificate
+Obtained on May 9, 2023. Confirmation link [here](confirm.udacity.com/e/42c2fca4-538a-11ed-897d-3f3b24f42a28)
+![certificate](images/udacity-de-certiticate.png)
